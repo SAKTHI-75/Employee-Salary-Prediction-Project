@@ -1,0 +1,70 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+
+# 1. Load and preprocess data
+def load_data():
+    df = pd.read_csv("C:/Users/sivaa/Downloads/adult")  # Ensure this file is in the same folder
+    df.replace(' ?', np.nan, inplace=True)
+    df.dropna(inplace=True)
+
+    label_encoders = {}
+    for col in df.select_dtypes(include=['object']).columns:
+        if col != 'income':
+            le = LabelEncoder()
+            df[col] = le.fit_transform(df[col])
+            label_encoders[col] = le
+
+    df['income'] = df['income'].apply(lambda x: 1 if x.strip() == '>50K' else 0)
+    return df, label_encoders
+
+# 2. Train model
+def train_model(df):
+    X = df.drop("income", axis=1)
+    y = df["income"]
+
+    model = RandomForestClassifier()
+    model.fit(X, y)
+    return model, df.columns.drop('income')
+
+# 3. Take user input
+def get_user_input(columns, encoders):
+    user_input = {}
+    print("\nEnter the following details:")
+
+    for col in columns:
+        if col in encoders:
+            options = encoders[col].classes_
+            print(f"{col} options: {list(options)}")
+            val = input(f"Enter {col}: ")
+            while val not in options:
+                print("Invalid input. Please choose from the list.")
+                val = input(f"Enter {col}: ")
+            user_input[col] = encoders[col].transform([val])[0]
+        else:
+            val = input(f"Enter {col} (numeric): ")
+            while True:
+                try:
+                    user_input[col] = float(val)
+                    break
+                except:
+                    val = input(f"Invalid number. Enter {col} again: ")
+
+    return pd.DataFrame([user_input])
+
+# 4. Main function
+def main():
+    print("Loading and training model...")
+    df, encoders = load_data()
+    model, feature_columns = train_model(df)
+    user_df = get_user_input(feature_columns, encoders)
+
+    prediction = model.predict(user_df)[0]
+    print("\nPrediction Result:")
+    print("Income: >50K" if prediction == 1 else "Income: <=50K")
+
+# Run the program
+if _name_ == "_main_":
+    main()
